@@ -60,6 +60,18 @@ class InitiatePaymentView(APIView):
 
     
     def post(self, request):
+
+        # Extract payment details from the request
+        user_id = request.data.get('user_id')  # Ensure user_id is passed in the request
+        if not user_id:
+            return Response({"error": "user_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Retrieve the User instance from the user_id
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
         # Extract payment details from the request
         amount = request.data.get('amount')
         currency = request.data.get('currency')
@@ -125,7 +137,7 @@ class InitiatePaymentView(APIView):
                         amount=amount,
                         status='pending',  # Update status as needed
                         payment_method=channel,
-                        user=request.data.get('user_id')  # If applicable
+                        user=user # If applicable
                     )
                     return Response(charge_response.json(), status=status.HTTP_202_ACCEPTED)
                 else:

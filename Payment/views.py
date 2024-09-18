@@ -149,27 +149,41 @@ class InitiatePaymentView(APIView):
             return Response(response.json(), status=response.status_code)
 
 
-# Handle Webhooks for Payment Verification
 class NotchPayWebhookView(APIView):
-
     def post(self, request):
         # Log the incoming webhook request for debugging
         logger = logging.getLogger(__name__)
         logger.info(f"Webhook received: {request.data}")
 
-        # This is triggered when Notch Pay sends a payment verification
-        payment_data = request.data
+        # Extract the event and data from the request
+        event = request.data.get('event')
+        data = request.data.get('data')
 
-        if payment_data:
-            # Process the webhook data
-            if payment_data.get('status') == 'success':
-                # Update the payment status in your database
-                # You can fetch the user/order associated with this payment
-                return Response({"message": "Payment verified"}, status=status.HTTP_200_OK)
+        if not event or not data:
+            return Response({"error": "Invalid data"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            if event == 'payment.initialized':
+                # Handle payment initialized event
+                # You can save this to the database or log it for further processing
+                logger.info(f"Payment initialized: {data}")
+                return Response({"message": "Payment initialized received"}, status=status.HTTP_200_OK)
+
+            elif event == 'payment.complete':
+                # Handle payment complete event
+                logger.info(f"Payment completed: {data}")
+                # Process the payment completion
+                return Response({"message": "Payment complete received"}, status=status.HTTP_200_OK)
+
             else:
-                return Response({"error": "Payment verification failed"}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({"error": "No data received"}, status=status.HTTP_400_BAD_REQUEST)
+                # Unrecognized event type
+                logger.warning(f"Unrecognized event type: {event}")
+                return Response({"error": "Unrecognized event type"}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            # Log the exception for debugging
+            logger.error(f"Error processing webhook: {e}")
+            return Response({"error": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class VerifyPaymentView(APIView):
 

@@ -13,7 +13,6 @@ djangorestframework==3.15.2
 djangorestframework-simplejwt==5.3.1
 djoser==2.2.3
 drf-yasg==1.21.7
-gunicorn==23.0.0
 idna==3.10
 inflection==0.5.1
 oauthlib==3.2.2
@@ -35,3 +34,5 @@ typing-extensions==4.12.2
 uritemplate==4.1.1
 urllib3==2.2.3
 whitenoise==6.7.0
+backports.zoneinfo
+

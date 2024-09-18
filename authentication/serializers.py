@@ -4,23 +4,9 @@ from rest_framework import serializers
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 
+
 class UserCreationSerializer(serializers.ModelSerializer):
-
-
-
-    first_name = serializers.CharField(max_length=100)
-    username = serializers.CharField(max_length=100)
-    last_name = serializers.CharField(max_length=100)
-    profession = serializers.CharField(max_length=100)
-    email = serializers.EmailField()
-    phone1 = serializers.CharField(max_length=15)
-    phone2 = serializers.CharField(max_length=15)
-    gender = serializers.CharField(max_length=1)
-    date_of_birth = serializers.DateField()
-    password = serializers.CharField(max_length=255, write_only=True)  # write_only for security
-    country = serializers.CharField(max_length=100)
-    city = serializers.CharField(max_length=100)
-    referrer_id = serializers.IntegerField(required=False, allow_null=True)  # New field for referral
+    referrer_id = serializers.IntegerField(required=False, allow_null=True)
 
     class Meta:
         model = User
@@ -29,22 +15,20 @@ class UserCreationSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         email_exists = User.objects.filter(email=attrs['email']).exists()
         if email_exists:
-            raise serializers.ValidationError(detail="User with email already exists.")
+            raise serializers.ValidationError("User with this email already exists.")
         return super().validate(attrs)
 
-    @transaction.atomic  # Ensure atomicity for the database transactions
+    @transaction.atomic
     def create(self, validated_data):
-        # Get referral code from request parameters (query string)
-        referral_code = self.context['request'].GET.get('ref', None)
+        referral_code = self.context['request'].GET.get('ref', None)  # Safely get 'ref' from request query params
         referrer = None
 
         if referral_code:
             try:
-                # Try to find the user who owns the referral code
                 referrer = User.objects.get(referral_code=referral_code)
             except User.DoesNotExist:
                 raise serializers.ValidationError("Invalid referral code.")
-        
+
         # Create the new user
         user = User.objects.create(
             first_name=validated_data['first_name'],
@@ -60,39 +44,31 @@ class UserCreationSerializer(serializers.ModelSerializer):
             country=validated_data['country'],
             city=validated_data['city']
         )
-        
         user.set_password(validated_data['password'])
 
-        # If a referrer exists, assign the referrer to the user
+        # Assign referrer if exists
         if referrer:
             user.referrer = referrer
         
-        user.save()  # Save the user with the updated referrer
+        user.save()
 
-        # Create or update the affiliate for the new user
-        affiliate, created = Affiliate.objects.get_or_create(user=user)
+        # Handle affiliate logic
+        affiliate, _ = Affiliate.objects.get_or_create(user=user)
 
         if referrer:
-            # Get or create the affiliate for the referrer
             referrer_affiliate, _ = Affiliate.objects.get_or_create(user=referrer)
-
-            # Set the referrer for the new affiliate
             affiliate.referrer = referrer_affiliate
             affiliate.save()
 
-            # Award points to the direct referrer
             referrer_affiliate.points += 1500
             referrer_affiliate.save()
 
-            # Handle the referrer's referrer (2nd-level referral) if they exist
             if referrer_affiliate.referrer:
                 try:
                     referrer_of_referrer_affiliate, _ = Affiliate.objects.get_or_create(user=referrer_affiliate.referrer.user)
-                    # Award points to the 2nd-level referrer
                     referrer_of_referrer_affiliate.points += 150
                     referrer_of_referrer_affiliate.save()
                 except ObjectDoesNotExist:
-                    # Handle case where the referrer of the referrer does not exist
                     pass
 
         return user

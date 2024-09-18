@@ -6,6 +6,7 @@ from django.conf import settings
 from .models import Payment
 from authentication.models import User
 from .serializers import PaymentSerializer
+import logging
 
 class PaymentStatusView(APIView):
 
@@ -151,18 +152,24 @@ class InitiatePaymentView(APIView):
 # Handle Webhooks for Payment Verification
 class NotchPayWebhookView(APIView):
 
-
     def post(self, request):
+        # Log the incoming webhook request for debugging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Webhook received: {request.data}")
+
         # This is triggered when Notch Pay sends a payment verification
         payment_data = request.data
 
-        # Verify the payment status and handle it accordingly
-        if payment_data.get('status') == 'success':
-            # Update the payment status in your database
-            # You can fetch the user/order associated with this payment
-            return Response({"message": "Payment verified"}, status=status.HTTP_200_OK)
+        if payment_data:
+            # Process the webhook data
+            if payment_data.get('status') == 'success':
+                # Update the payment status in your database
+                # You can fetch the user/order associated with this payment
+                return Response({"message": "Payment verified"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Payment verification failed"}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({"error": "Payment verification failed"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "No data received"}, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyPaymentView(APIView):
 

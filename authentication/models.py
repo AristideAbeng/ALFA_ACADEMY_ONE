@@ -2,6 +2,11 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.base_user import BaseUserManager
 from django.utils.translation import gettext_lazy as _
+import string
+import random
+
+def generate_referral_code():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 # Create your models here.
 
 
@@ -63,6 +68,8 @@ class User(AbstractUser):
     last_login = models.DateTimeField(auto_now=True, null=True)
     date_joined = models.DateTimeField(auto_now_add=True, null=True)
     account_verification=models.TextField(blank=True,null=True)
+    referrer = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='referrals')
+    referral_code = models.CharField(max_length=10, unique=True, blank=True)
 
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
@@ -77,6 +84,15 @@ class User(AbstractUser):
         db_table = 'utilisateur'
     
     objects = CustomUserManager()
+
+    def save(self, *args, **kwargs):
+        if not self.referral_code:
+            self.referral_code = generate_referral_code()
+        super().save(*args, **kwargs)
+
+    def get_referral_link(self):
+        return f"https://www.alfa-academy-one-web.vercel.app/signup?ref={self.referral_code}"
+
 
     def __str__(self):
         return f'{self.email}'

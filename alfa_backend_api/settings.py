@@ -46,7 +46,8 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'djoser',
-    'drf_yasg'
+    'drf_yasg',
+     'affiliates',
 
 
 

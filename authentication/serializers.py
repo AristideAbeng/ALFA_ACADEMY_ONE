@@ -1,7 +1,11 @@
 from .models import User
+from affiliates.models import Affiliate 
 from rest_framework import serializers
+from django.db import transaction
+from django.core.exceptions import ObjectDoesNotExist
 
 class UserCreationSerializer(serializers.ModelSerializer):
+
 
 
     first_name = serializers.CharField(max_length=100)
@@ -13,44 +17,83 @@ class UserCreationSerializer(serializers.ModelSerializer):
     phone2 = serializers.CharField(max_length=15)
     gender = serializers.CharField(max_length=1)
     date_of_birth = serializers.DateField()
-    password = serializers.CharField(max_length=255)
+    password = serializers.CharField(max_length=255, write_only=True)  # write_only for security
     country = serializers.CharField(max_length=100)
     city = serializers.CharField(max_length=100)
+    referrer_id = serializers.IntegerField(required=False, allow_null=True)  # New field for referral
 
     class Meta:
         model = User
-        fields = ['first_name','last_name','username','profession','email','phone1','phone2','gender','date_of_birth','password','country','city']
+        fields = ['first_name', 'last_name', 'username', 'profession', 'email', 'phone1', 'phone2', 'gender', 'date_of_birth', 'password', 'country', 'city', 'referrer_id']
 
-
-    def validate(self,attrs):
-
+    def validate(self, attrs):
         email_exists = User.objects.filter(email=attrs['email']).exists()
-
         if email_exists:
-            raise serializers.ValidationError(detail="User with email already exits ")
-
+            raise serializers.ValidationError(detail="User with email already exists.")
         return super().validate(attrs)
 
-    def create(self,validated_data):
+    @transaction.atomic  # Ensure atomicity for the database transactions
+    def create(self, validated_data):
+        # Get referral code from request parameters (query string)
+        referral_code = self.context['request'].GET.get('ref', None)
+        referrer = None
 
+        if referral_code:
+            try:
+                # Try to find the user who owns the referral code
+                referrer = User.objects.get(referral_code=referral_code)
+            except User.DoesNotExist:
+                raise serializers.ValidationError("Invalid referral code.")
+        
+        # Create the new user
         user = User.objects.create(
-            first_name = validated_data['first_name'],
-            last_name = validated_data['last_name'],
-            username = validated_data['username'],
-            profession = validated_data['profession'],
-            email = validated_data['email'],
-            phone1 = validated_data['phone1'],
-            phone2 = validated_data['phone2'],
-            is_active = True,
-            gender = validated_data['gender'],
-            date_of_birth =validated_data['date_of_birth'],
-            country = validated_data['country'],
-            city = validated_data['city']
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name'],
+            username=validated_data['username'],
+            profession=validated_data['profession'],
+            email=validated_data['email'],
+            phone1=validated_data['phone1'],
+            phone2=validated_data['phone2'],
+            is_active=True,
+            gender=validated_data['gender'],
+            date_of_birth=validated_data['date_of_birth'],
+            country=validated_data['country'],
+            city=validated_data['city']
         )
-
+        
         user.set_password(validated_data['password'])
 
-        user.save()
+        # If a referrer exists, assign the referrer to the user
+        if referrer:
+            user.referrer = referrer
+        
+        user.save()  # Save the user with the updated referrer
+
+        # Create or update the affiliate for the new user
+        affiliate, created = Affiliate.objects.get_or_create(user=user)
+
+        if referrer:
+            # Get or create the affiliate for the referrer
+            referrer_affiliate, _ = Affiliate.objects.get_or_create(user=referrer)
+
+            # Set the referrer for the new affiliate
+            affiliate.referrer = referrer_affiliate
+            affiliate.save()
+
+            # Award points to the direct referrer
+            referrer_affiliate.points += 1500
+            referrer_affiliate.save()
+
+            # Handle the referrer's referrer (2nd-level referral) if they exist
+            if referrer_affiliate.referrer:
+                try:
+                    referrer_of_referrer_affiliate, _ = Affiliate.objects.get_or_create(user=referrer_affiliate.referrer.user)
+                    # Award points to the 2nd-level referrer
+                    referrer_of_referrer_affiliate.points += 150
+                    referrer_of_referrer_affiliate.save()
+                except ObjectDoesNotExist:
+                    # Handle case where the referrer of the referrer does not exist
+                    pass
 
         return user
 
@@ -68,10 +111,14 @@ class UserDetailSerializer(serializers.ModelSerializer):
     password = serializers.CharField(max_length=255)
     country = serializers.CharField(max_length=100)
     city = serializers.CharField(max_length=100)
+    referral_link = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['first_name','last_name','username','profession','email','phone1','phone2','gender','date_of_birth','password','country','city']
+        fields = ['first_name','last_name','username','profession','email','phone1','phone2','gender','date_of_birth','password','country','city','referral_link']
+
+    def get_referral_link(self, obj):
+        return obj.get_referral_link()
 
     def update(self, instance, validated_data):
 

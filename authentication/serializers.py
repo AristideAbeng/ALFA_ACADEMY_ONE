@@ -3,6 +3,7 @@ from affiliates.models import Affiliate
 from rest_framework import serializers
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
+from Payment.models import Payment
 
 
 class UserCreationSerializer(serializers.ModelSerializer):
@@ -52,6 +53,7 @@ class UserCreationSerializer(serializers.ModelSerializer):
         
         user.save()
 
+        
         # Handle affiliate logic
         affiliate, _ = Affiliate.objects.get_or_create(user=user)
 

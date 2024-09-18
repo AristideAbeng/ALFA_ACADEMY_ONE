@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'djoser',
     'drf_yasg',
      'affiliates',
+     'Payment',
 
 
 

@@ -93,7 +93,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['first_name','last_name','username','profession','email','phone1','phone2','gender','date_of_birth','password','country','city','referral_link']
+        fields = ['id','first_name','last_name','username','profession','email','phone1','phone2','gender','date_of_birth','password','country','city','referral_link']
 
     def get_referral_link(self, obj):
         return obj.get_referral_link()

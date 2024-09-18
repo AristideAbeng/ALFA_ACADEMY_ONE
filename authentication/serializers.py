@@ -5,6 +5,7 @@ class UserCreationSerializer(serializers.ModelSerializer):
 
 
     first_name = serializers.CharField(max_length=100)
+    username = serializers.CharField(max_length=100)
     last_name = serializers.CharField(max_length=100)
     profession = serializers.CharField(max_length=100)
     email = serializers.EmailField()
@@ -18,7 +19,7 @@ class UserCreationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['first_name','last_name','profession','email','phone1','phone2','gender','date_of_birth','password','country','city']
+        fields = ['first_name','last_name','username','profession','email','phone1','phone2','gender','date_of_birth','password','country','city']
 
 
     def validate(self,attrs):
@@ -35,6 +36,7 @@ class UserCreationSerializer(serializers.ModelSerializer):
         user = User.objects.create(
             first_name = validated_data['first_name'],
             last_name = validated_data['last_name'],
+            username = validated_data['username'],
             profession = validated_data['profession'],
             email = validated_data['email'],
             phone1 = validated_data['phone1'],
@@ -55,6 +57,7 @@ class UserCreationSerializer(serializers.ModelSerializer):
 class UserDetailSerializer(serializers.ModelSerializer):
 
     first_name = serializers.CharField(max_length=100)
+    username = serializers.CharField(max_length=100)
     last_name = serializers.CharField(max_length=100)
     profession = serializers.CharField(max_length=100)
     email = serializers.EmailField()
@@ -68,12 +71,13 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['first_name','last_name','profession','email','phone1','phone2','gender','date_of_birth','password','country','city']
+        fields = ['first_name','last_name','username','profession','email','phone1','phone2','gender','date_of_birth','password','country','city']
 
     def update(self, instance, validated_data):
 
         instance.first_name = validated_data.get('first_name', instance.first_name)
         instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.username = validated_data.get('username', instance.username)
         instance.profession = validated_data.get('profession', instance.profession)
         instance.gender = validated_data.get('gender', instance.gender)
         instance.date_of_birth = validated_data.get('date_of_birth', instance.date_of_birth)

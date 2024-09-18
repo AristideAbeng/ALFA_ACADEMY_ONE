@@ -45,6 +45,7 @@ class User(AbstractUser):
     
     # Fields for storing the user data
     id = models.AutoField(primary_key=True)
+    username = models.CharField(max_length=100)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     profession = models.CharField(max_length=100, null=True, blank=True)

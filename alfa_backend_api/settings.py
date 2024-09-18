@@ -22,6 +22,19 @@ NOTCH_PAY_PUBLIC_KEY = config('NOTCH_PAY_PUBLIC_KEY')
 NOTCH_PAY_PRIVATE_KEY = config('NOTCH_PAY_PRIVATE_KEY')
 NOTCH_PAY_BASE_URL = config('NOTCH_PAY_BASE_URL')
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+}
 
 SWAGGER_SETTINGS = {
    'SECURITY_DEFINITIONS': {

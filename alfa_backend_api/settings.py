@@ -18,6 +18,10 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG',cast=bool)
 
+NOTCH_PAY_PUBLIC_KEY = config('NOTCH_PAY_PUBLIC_KEY')
+NOTCH_PAY_PRIVATE_KEY = config('NOTCH_PAY_PRIVATE_KEY')
+NOTCH_PAY_BASE_URL = config('NOTCH_PAY_BASE_URL')
+
 
 SWAGGER_SETTINGS = {
    'SECURITY_DEFINITIONS': {
@@ -146,6 +150,7 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
+
 
 
 # Static files (CSS, JavaScript, Images)

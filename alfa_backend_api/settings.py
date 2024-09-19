@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'drf_yasg',
      'affiliates',
      'Payment',
+     'Events',
 
 
 

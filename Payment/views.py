@@ -7,6 +7,15 @@ from .models import Payment
 from authentication.models import User
 from .serializers import PaymentSerializer
 import logging
+import json
+import hmac
+import hashlib
+from django.http import JsonResponse
+from Events.models import Event
+from django.http import StreamingHttpResponse
+import time
+
+
 
 class PaymentStatusView(APIView):
 
@@ -150,40 +159,65 @@ class InitiatePaymentView(APIView):
 
 
 class NotchPayWebhookView(APIView):
-    def post(self, request):
-        # Log the incoming webhook request for debugging
-        logger = logging.getLogger(__name__)
-        logger.info(f"Webhook received: {request.data}")
 
-        # Extract the event and data from the request
-        event = request.data.get('event')
-        data = request.data.get('data')
+    def post(self, request, *args, **kwargs):
+        # Fetch the secret key from environment variables
+        secret_key = settings.NOTCH_PAY_PRIVATE_KEY
 
-        if not event or not data:
-            return Response({"error": "Invalid data"}, status=status.HTTP_400_BAD_REQUEST)
+        # Calculate the HMAC hash of the request body using the secret key
+        calculated_hash = hmac.new(
+            secret_key.encode('utf-8'),
+            request.body,
+            hashlib.sha256
+        ).hexdigest()
 
+        # Get the Notch Pay signature from the headers
+        notch_signature = request.headers.get('x-notch-signature')
+
+        # Verify that the calculated hash matches the signature
+        if calculated_hash != notch_signature:
+            return JsonResponse({"error": "Invalid signature"}, status=400)
+
+        # Parse the event data from the request body
+        event = json.loads(request.body)
+        event_id = event.get('id')
+
+        # Idempotency: Check if this event has already been processed
+        if Event.objects.filter(event_id=event_id).exists():
+            return JsonResponse({"status": "duplicate"}, status=200)
+
+        # Store the event ID to prevent duplicate processing
+        Event.objects.create(event_id=event_id)
+
+        # Handle the event type
+        event_type = event['event']
+        
+        if event_type == 'payment.complete':
+            # Update payment status in the database
+            self.update_payment_status(event)
+
+        # Add more event types here as needed
+
+        # Immediately return a 200 response to acknowledge receipt of the webhook
+        return JsonResponse({"status": "success"}, status=200)
+
+    def update_payment_status(self, event):
+        # Extract the transaction ID from event data
+        transaction_id = event['data']['reference']
+        payment_status = event['data']['status']
+
+        # Fetch the payment from the database using the transaction ID
         try:
-            if event == 'payment.initialized':
-                # Handle payment initialized event
-                # You can save this to the database or log it for further processing
-                logger.info(f"Payment initialized: {data}")
-                return Response({"message": "Payment initialized received"}, status=status.HTTP_200_OK)
+            payment = Payment.objects.get(transaction_id=transaction_id)
+            if payment.status != payment_status:
+                # Update the payment status
+                payment.status = payment_status
+                payment.save()
+        except Payment.DoesNotExist:
+            # Handle case if the payment is not found
+            pass
 
-            elif event == 'payment.complete':
-                # Handle payment complete event
-                logger.info(f"Payment completed: {data}")
-                # Process the payment completion
-                return Response({"message": "Payment complete received"}, status=status.HTTP_200_OK)
-
-            else:
-                # Unrecognized event type
-                logger.warning(f"Unrecognized event type: {event}")
-                return Response({"error": "Unrecognized event type"}, status=status.HTTP_400_BAD_REQUEST)
-
-        except Exception as e:
-            # Log the exception for debugging
-            logger.error(f"Error processing webhook: {e}")
-            return Response({"error": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+   
 
 class VerifyPaymentView(APIView):
 
@@ -226,3 +260,31 @@ class VerifyPaymentView(APIView):
                 "error": "Failed to verify payment",
                 "details": response.json()
             }, status=response.status_code)
+
+class PaymentSSEView(APIView):
+
+    def get(self, request, *args, **kwargs):
+        def event_stream():
+            payment_status = "pending"
+            
+            # Simulate some server-side processing or verification
+            while payment_status != "complete":
+                time.sleep(2)  # Delay to simulate checking process
+                payment_status = self.check_payment_status()  # Check the payment status from DB
+                yield f"data: {{'payment_status': '{payment_status}'}}\n\n"
+
+            yield "event: complete\n"
+            yield "data: { 'message': 'Payment completed successfully.' }\n\n"
+        
+        return StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+
+    def verify_payment_status(self, event):
+        # Extract the transaction ID from event data
+        transaction_id = event['data']['reference']
+
+        # Fetch the payment from the database using the transaction ID
+        try:
+            payment = Payment.objects.get(transaction_id=transaction_id)
+            return payment.status
+        except Payment.DoesNotExist:
+            return "not_found"  # Handle case if the payment is not found

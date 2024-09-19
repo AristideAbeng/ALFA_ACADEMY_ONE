@@ -163,21 +163,20 @@ class NotchPayWebhookView(APIView):
 
     def post(self, request, *args, **kwargs):
         # Fetch the secret key from environment variables
-        secret_key = settings.NOTCH_PAY_PRIVATE_KEY
-
         logger.info('Webhook received.')
 
-        # Calculate the HMAC hash of the request body using the secret key
+        secret_key = settings.NOTCH_PAY_PRIVATE_KEY
         calculated_hash = hmac.new(
             secret_key.encode('utf-8'),
             request.body,
             hashlib.sha256
         ).hexdigest()
 
-        # Get the Notch Pay signature from the headers
-        notch_signature = request.headers.get('x-notch-signature')
+        notch_signature = request.headers.get('x-notch-signature', '')
 
-        # Verify that the calculated hash matches the signature
+        logger.debug(f"Calculated hash: {calculated_hash}")
+        logger.debug(f"Notch signature: {notch_signature}")
+
         if calculated_hash != notch_signature:
             logger.warning('Invalid signature detected.')
             return JsonResponse({"error": "Invalid signature"}, status=400)
@@ -269,25 +268,23 @@ class VerifyPaymentView(APIView):
 
 class PaymentSSEView(APIView):
 
-    def get(self, request, *args, **kwargs):
-
+    def get(self, request):
         logger.info('SSE connection initiated.')
 
         def event_stream():
             payment_status = "pending"
-            
-            # Simulate some server-side processing or verification
-            while payment_status != "complete":
+            while payment_status != "success":
                 logger.debug(f"Current payment status: {payment_status}")
-                time.sleep(2)  # Delay to simulate checking process
-                payment_status = self.check_payment_status()  # Check the payment status from DB
+                time.sleep(2)  # Simulate waiting for payment status change
+                payment_status = self.verify_payment_status()  # Implement this function
                 yield f"data: {{'payment_status': '{payment_status}'}}\n\n"
 
             logger.info('Payment completed successfully.')
             yield "event: complete\n"
             yield "data: { 'message': 'Payment completed successfully.' }\n\n"
-        
+
         return StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+
 
     def verify_payment_status(self, event):
         # Extract the transaction ID from event data

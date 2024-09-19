@@ -89,7 +89,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
         instance.email = validated_data.get('email', instance.email)
         instance.phone1 = validated_data.get('phone1', instance.phone1)
         instance.phone2 = validated_data.get('phone2', instance.phone2)
-        instance.dernier_diplome = validated_data.get('dernier_diplome', instance.dernier_diplome)
+        #instance.dernier_diplome = validated_data.get('dernier_diplome', instance.dernier_diplome)
         instance.country = validated_data.get('country', instance.country)
         instance.city = validated_data.get('city', instance.city)
 

@@ -14,8 +14,8 @@ class GetAffiliateByUserID(APIView):
         
         # Return the affiliate data
         return Response({
-            'user': affiliate.user.username,
-            'referrer': affiliate.referrer.user.username if affiliate.referrer else None,
+            'user': affiliate.user.id,
+            'referrer': affiliate.referrer.user.id if affiliate.referrer else None,
             'direct_points': affiliate.direct_points,
             'indirect_points': affiliate.indirect_points
         }, status=status.HTTP_200_OK)

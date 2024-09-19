@@ -263,23 +263,31 @@ class VerifyPaymentView(APIView):
                 payment = Payment.objects.get(transaction_id=transaction_reference)
                 user = payment.user
 
-                # Handle affiliate points logic
-                try:
-                    affiliate = Affiliate.objects.get(user=user)
-                    if affiliate.referrer:
-                        # Direct referrer gets 1500 points
-                        referrer_affiliate = affiliate.referrer
-                        referrer_affiliate.direct_points += 1500
-                        referrer_affiliate.save()
+                # Check if the user is already an affiliate, if not create an entry
+                affiliate, created = Affiliate.objects.get_or_create(user=user)
 
-                        # Referrer of the referrer (Level 2) gets 150 points
-                        if referrer_affiliate.referrer:
-                            indirect_referrer_affiliate = referrer_affiliate.referrer
-                            indirect_referrer_affiliate.indirect_points += 150
-                            indirect_referrer_affiliate.save()
+                if created:
+                    # The user has a referrer_id, we assign it to the affiliate
+                    if user.referrer_id:
+                        try:
+                            referrer = User.objects.get(id=user.referrer_id)
+                            affiliate.referrer = referrer.affiliate
+                            affiliate.save()
+                        except User.DoesNotExist:
+                            logger.error("Referrer does not exist")
 
-                except Affiliate.DoesNotExist:
-                    pass
+                # Handle affiliate points logic (for direct and indirect referrers)
+                if affiliate.referrer:
+                    # Direct referrer gets 1500 points
+                    referrer_affiliate = affiliate.referrer
+                    referrer_affiliate.direct_points += 1500
+                    referrer_affiliate.save()
+
+                    # Indirect referrer (Level 2) gets 150 points
+                    if referrer_affiliate.referrer:
+                        indirect_referrer_affiliate = referrer_affiliate.referrer
+                        indirect_referrer_affiliate.indirect_points += 150
+                        indirect_referrer_affiliate.save()
 
             # Return the payment status
             return Response({

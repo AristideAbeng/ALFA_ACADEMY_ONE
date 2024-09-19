@@ -1,3 +1,4 @@
+from django.db import transaction
 import requests
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -231,6 +232,7 @@ class NotchPayWebhookView(APIView):
 
 class VerifyPaymentView(APIView):
 
+    @transaction.atomic  # Ensures all operations inside this method are wrapped in a transaction
     def get(self, request, reference):
         # Make the API request to verify the payment using the reference
         response = requests.get(

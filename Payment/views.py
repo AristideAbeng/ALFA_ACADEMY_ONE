@@ -242,6 +242,7 @@ class VerifyPaymentView(APIView):
         if response.status_code == 200:
             # Extract payment data from the response
             notchpay_response = response.json()
+            logger.info(f"NotchPayResponse For payment_verification: {notchpay_response}")
             payment_status = notchpay_response.get('payment', {}).get('status', 'unknown')
             transaction_reference = notchpay_response.get('payment', {}).get('reference', '')
             amount = notchpay_response.get('payment', {}).get('amount', 0)

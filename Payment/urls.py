@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import PaymentStatusView,InitiatePaymentView, NotchPayWebhookView, VerifyPaymentView, PaymentSSEView
+from .views import PaymentStatusView,InitiatePaymentView, NotchPayWebhookView, VerifyPaymentView
 
 urlpatterns = [
     # Other URL patterns...

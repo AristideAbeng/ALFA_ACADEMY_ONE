@@ -150,7 +150,9 @@ class InitiatePaymentView(APIView):
                         payment_method=channel,
                         user=user # If applicable
                     )
-                    return Response(charge_response.json(), status=status.HTTP_202_ACCEPTED)
+                    response_data = charge_response.json()
+                    response_data['reference'] = transaction_id
+                    return Response(data=response_data, status=status.HTTP_202_ACCEPTED)
                 else:
                     return Response(charge_response.json(), status=charge_response.status_code)
             else:
@@ -220,6 +222,7 @@ class NotchPayWebhookView(APIView):
                 payment.save()
         except Payment.DoesNotExist:
             # Handle case if the payment is not found
+            logger.info(f"Payment to update not found")
             pass
 
    
@@ -231,7 +234,7 @@ class VerifyPaymentView(APIView):
         response = requests.get(
             f"{settings.NOTCH_PAY_BASE_URL}/payments/{reference}",
             headers={
-                "Authorization": f"Bearer {settings.NOTCH_PAY_PUBLIC_KEY}",  # Use your public key here
+                "Authorization": settings.NOTCH_PAY_PUBLIC_KEY,  # Use your public key here
                 "Content-Type": "application/json"
             }
         )
@@ -265,37 +268,3 @@ class VerifyPaymentView(APIView):
                 "error": "Failed to verify payment",
                 "details": response.json()
             }, status=response.status_code)
-
-class PaymentSSEView(APIView):
-
-    def get(self, request):
-        logger.info('SSE connection initiated.')
-
-        def event_stream():
-            payment_status = "pending"
-            while payment_status != "success":
-                logger.debug(f"Current payment status: {payment_status}")
-                time.sleep(2)  # Simulate waiting for payment status change
-                payment_status = self.verify_payment_status()  # Implement this function
-                yield f"data: {{'payment_status': '{payment_status}'}}\n\n"
-
-            logger.info('Payment completed successfully.')
-            yield "event: complete\n"
-            yield "data: { 'message': 'Payment completed successfully.' }\n\n"
-
-        return StreamingHttpResponse(event_stream(), content_type='text/event-stream')
-
-
-    def verify_payment_status(self, event):
-        # Extract the transaction ID from event data
-        transaction_id = event['data']['reference']
-        logger.debug('Verifying payment status in the database...')
-
-        # Fetch the payment from the database using the transaction ID
-        try:
-            payment = Payment.objects.get(transaction_id=transaction_id)
-            logger.debug('Verifying payment status in the database...',payment.status)
-            return payment.status
-        except Payment.DoesNotExist:
-            logger.debug('Verifying payment status in the database... NOT FOUND')
-            return "not_found"  # Handle case if the payment is not found

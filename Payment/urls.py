@@ -9,5 +9,4 @@ urlpatterns = [
     path('initiate/', InitiatePaymentView.as_view(), name='initiate-payment'),
     path('webhook/', NotchPayWebhookView.as_view(), name='notchpay-webhook'),
      path('verify-payment/<str:reference>/', VerifyPaymentView.as_view(), name='verify-payment'),
-     path('payment-status-stream/', PaymentSSEView.as_view(), name='payment_sse'),
 ]

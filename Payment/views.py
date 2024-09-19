@@ -15,6 +15,7 @@ from Events.models import Event
 from django.http import StreamingHttpResponse
 import time
 
+logger = logging.getLogger(__name__)
 
 
 class PaymentStatusView(APIView):
@@ -164,6 +165,8 @@ class NotchPayWebhookView(APIView):
         # Fetch the secret key from environment variables
         secret_key = settings.NOTCH_PAY_PRIVATE_KEY
 
+        logger.info('Webhook received.')
+
         # Calculate the HMAC hash of the request body using the secret key
         calculated_hash = hmac.new(
             secret_key.encode('utf-8'),
@@ -176,6 +179,7 @@ class NotchPayWebhookView(APIView):
 
         # Verify that the calculated hash matches the signature
         if calculated_hash != notch_signature:
+            logger.warning('Invalid signature detected.')
             return JsonResponse({"error": "Invalid signature"}, status=400)
 
         # Parse the event data from the request body
@@ -184,6 +188,7 @@ class NotchPayWebhookView(APIView):
 
         # Idempotency: Check if this event has already been processed
         if Event.objects.filter(event_id=event_id).exists():
+            logger.info('Duplicate event received.')
             return JsonResponse({"status": "duplicate"}, status=200)
 
         # Store the event ID to prevent duplicate processing
@@ -194,6 +199,7 @@ class NotchPayWebhookView(APIView):
         
         if event_type == 'payment.complete':
             # Update payment status in the database
+            logger.info(f"Handling payment completion for event ID: {event_id}")
             self.update_payment_status(event)
 
         # Add more event types here as needed
@@ -264,15 +270,20 @@ class VerifyPaymentView(APIView):
 class PaymentSSEView(APIView):
 
     def get(self, request, *args, **kwargs):
+
+        logger.info('SSE connection initiated.')
+
         def event_stream():
             payment_status = "pending"
             
             # Simulate some server-side processing or verification
             while payment_status != "complete":
+                logger.debug(f"Current payment status: {payment_status}")
                 time.sleep(2)  # Delay to simulate checking process
                 payment_status = self.check_payment_status()  # Check the payment status from DB
                 yield f"data: {{'payment_status': '{payment_status}'}}\n\n"
 
+            logger.info('Payment completed successfully.')
             yield "event: complete\n"
             yield "data: { 'message': 'Payment completed successfully.' }\n\n"
         
@@ -281,10 +292,13 @@ class PaymentSSEView(APIView):
     def verify_payment_status(self, event):
         # Extract the transaction ID from event data
         transaction_id = event['data']['reference']
+        logger.debug('Verifying payment status in the database...')
 
         # Fetch the payment from the database using the transaction ID
         try:
             payment = Payment.objects.get(transaction_id=transaction_id)
+            logger.debug('Verifying payment status in the database...',payment.status)
             return payment.status
         except Payment.DoesNotExist:
+            logger.debug('Verifying payment status in the database... NOT FOUND')
             return "not_found"  # Handle case if the payment is not found

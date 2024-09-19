@@ -86,13 +86,13 @@ class InitiatePaymentView(APIView):
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Extract payment details from the request
-        amount = request.data.get('amount')
-        currency = request.data.get('currency')
+        amount = 3000
+        currency = 'XAF'
         description = request.data.get('description', '')
         reference = request.data.get('reference', '')
         callback = request.data.get('callback', '')
         customer = request.data.get('customer')
-        channel = request.data.get('channel')  # Channel for payment
+        channel = request.data.get('channel','cm.mobile')  # Channel for payment
 
         if not customer or not customer.get('email') and not customer.get('phone'):
             return Response({"error": "Customer must have either an email or phone number."}, status=status.HTTP_400_BAD_REQUEST)

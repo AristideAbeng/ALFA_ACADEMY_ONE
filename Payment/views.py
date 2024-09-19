@@ -14,6 +14,8 @@ from django.http import JsonResponse
 from Events.models import Event
 from django.http import StreamingHttpResponse
 import time
+from affiliates.models import Affiliate
+
 
 logger = logging.getLogger(__name__)
 
@@ -243,10 +245,10 @@ class VerifyPaymentView(APIView):
             # Extract payment data from the response
             notchpay_response = response.json()
             logger.info(f"NotchPayResponse For payment_verification: {notchpay_response}")
-            payment_status = notchpay_response.get('payment', {}).get('status', 'unknown')
-            transaction_reference = notchpay_response.get('payment', {}).get('reference', '')
-            amount = notchpay_response.get('payment', {}).get('amount', 0)
-            currency = notchpay_response.get('payment', {}).get('currency', '')
+            payment_status = notchpay_response.get('transaction', {}).get('status', 'unknown')
+            transaction_reference = notchpay_response.get('transaction', {}).get('reference', '')
+            amount = notchpay_response.get('transaction', {}).get('amount', 0)
+            currency = notchpay_response.get('transaction', {}).get('currency', '')
 
             # Update the payment status in your database
             Payment.objects.filter(transaction_id=transaction_reference).update(
@@ -254,6 +256,30 @@ class VerifyPaymentView(APIView):
                 amount=amount,
                 currency=currency
             )
+
+            # Handle affiliate logic if payment is complete
+            if payment_status == 'complete':
+                # Get the user who made the payment
+                payment = Payment.objects.get(transaction_id=transaction_reference)
+                user = payment.user
+
+                # Handle affiliate points logic
+                try:
+                    affiliate = Affiliate.objects.get(user=user)
+                    if affiliate.referrer:
+                        # Direct referrer gets 1500 points
+                        referrer_affiliate = affiliate.referrer
+                        referrer_affiliate.direct_points += 1500
+                        referrer_affiliate.save()
+
+                        # Referrer of the referrer (Level 2) gets 150 points
+                        if referrer_affiliate.referrer:
+                            indirect_referrer_affiliate = referrer_affiliate.referrer
+                            indirect_referrer_affiliate.indirect_points += 150
+                            indirect_referrer_affiliate.save()
+
+                except Affiliate.DoesNotExist:
+                    pass
 
             # Return the payment status
             return Response({
@@ -263,6 +289,7 @@ class VerifyPaymentView(APIView):
                 "amount": amount,
                 "currency": currency,
             }, status=status.HTTP_200_OK)
+
         else:
             # Handle error response from Notch Pay API
             return Response({

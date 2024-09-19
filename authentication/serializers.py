@@ -53,26 +53,6 @@ class UserCreationSerializer(serializers.ModelSerializer):
         
         user.save()
 
-        
-        # Handle affiliate logic
-        affiliate, _ = Affiliate.objects.get_or_create(user=user)
-
-        if referrer:
-            referrer_affiliate, _ = Affiliate.objects.get_or_create(user=referrer)
-            affiliate.referrer = referrer_affiliate
-            affiliate.save()
-
-            referrer_affiliate.points += 1500
-            referrer_affiliate.save()
-
-            if referrer_affiliate.referrer:
-                try:
-                    referrer_of_referrer_affiliate, _ = Affiliate.objects.get_or_create(user=referrer_affiliate.referrer.user)
-                    referrer_of_referrer_affiliate.points += 150
-                    referrer_of_referrer_affiliate.save()
-                except ObjectDoesNotExist:
-                    pass
-
         return user
 
 class UserDetailSerializer(serializers.ModelSerializer):

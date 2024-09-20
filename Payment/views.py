@@ -291,6 +291,9 @@ class VerifyPaymentView(APIView):
                       # Create notification for direct referrer
                     Notification.objects.create(
                         user=referrer_affiliate.user,
+                        affiliate=user.email,
+                        amount=1500,
+                        is_affiliation=True,
                         message=f"You have received 1500 direct points from {user.email}."
                     )
 
@@ -303,6 +306,9 @@ class VerifyPaymentView(APIView):
                           # Create notification for indirect referrer
                         Notification.objects.create(
                             user=indirect_referrer_affiliate.user,
+                            affiliate=user.email,
+                            amount=150,
+                            is_affiliation=True,
                             message=f"You have received 150 indirect points from {user.email}'s referral."
                         )
 

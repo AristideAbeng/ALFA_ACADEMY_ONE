@@ -7,6 +7,7 @@ class Affiliate(models.Model):
     referrer = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='referrals')
     direct_points = models.IntegerField(default=0)  # To store the points earned by the affiliate
     indirect_points = models.IntegerField(default=0)  # To store the points earned by the affiliate
+    withdrawed_points = models.IntegerField(default=0) #
  
 
     def __str__(self):

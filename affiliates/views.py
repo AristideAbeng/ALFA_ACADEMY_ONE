@@ -17,5 +17,6 @@ class GetAffiliateByUserID(APIView):
             'user': affiliate.user.id,
             'referrer': affiliate.referrer.user.id if affiliate.referrer else None,
             'direct_points': affiliate.direct_points,
-            'indirect_points': affiliate.indirect_points
+            'indirect_points': affiliate.indirect_points,
+            'withdrawed_points':affiliate.withdrawed_points
         }, status=status.HTTP_200_OK)

@@ -91,7 +91,7 @@ class User(AbstractUser):
         super().save(*args, **kwargs)
 
     def get_referral_link(self):
-        return f"https://www.alfa-academy-one-web.vercel.app/signup?ref={self.referral_code}"
+        return f"alfa-academy-one-web.vercel.app/signup?ref={self.referral_code}"
 
 
     def __str__(self):

@@ -7,6 +7,14 @@ from .serializers import PublicationsSerializer
 
 # Get all publications sorted by last_updated
 class GetAllPublications(APIView):
+
+     # Create a new publication
+    def post(self, request):
+        serializer = PublicationsSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def get(self, request):
         publications = Publications.objects.all().order_by('-last_updated')  # Sorted by last_updated

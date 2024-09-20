@@ -14,3 +14,7 @@ class Affiliate(models.Model):
 
     def __str__(self):
         return self.user.username
+
+    def has_affiliates(self):
+        # Returns True if this affiliate has referred others
+        return Affiliate.objects.filter(referrer=self).exists()

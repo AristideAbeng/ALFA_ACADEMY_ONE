@@ -69,6 +69,7 @@ INSTALLED_APPS = [
      'affiliates',
      'Payment',
      'Events',
+     'Notifications'
 
 
 

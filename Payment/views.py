@@ -4,6 +4,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
+
+from Notifications.models import Notification
 from .models import Payment
 from authentication.models import User
 from .serializers import PaymentSerializer
@@ -285,11 +287,24 @@ class VerifyPaymentView(APIView):
                     referrer_affiliate.direct_points += 1500
                     referrer_affiliate.save()
 
+
+                      # Create notification for direct referrer
+                    Notification.objects.create(
+                        user=referrer_affiliate.user,
+                        message=f"You have received 1500 direct points from {user.email}."
+                    )
+
                     # Indirect referrer (Level 2) gets 150 points
                     if referrer_affiliate.referrer:
                         indirect_referrer_affiliate = referrer_affiliate.referrer
                         indirect_referrer_affiliate.indirect_points += 150
                         indirect_referrer_affiliate.save()
+
+                          # Create notification for indirect referrer
+                        Notification.objects.create(
+                            user=indirect_referrer_affiliate.user,
+                            message=f"You have received 150 indirect points from {user.email}'s referral."
+                        )
 
             # Return the payment status
             return Response({

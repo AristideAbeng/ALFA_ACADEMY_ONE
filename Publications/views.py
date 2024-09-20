@@ -10,11 +10,16 @@ class GetAllPublications(APIView):
 
      # Create a new publication
     def post(self, request):
-        serializer = PublicationsSerializer(data=request.data)
+        # Automatically set the user to the currently authenticated user
+        publication_data = request.data.copy()
+        publication_data['user'] = request.user.id  # Use the logged-in user's ID
+        
+        serializer = PublicationsSerializer(data=publication_data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     
     def get(self, request):
         publications = Publications.objects.all().order_by('-last_updated')  # Sorted by last_updated

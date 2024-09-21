@@ -5,7 +5,7 @@ from authentication.models import User
 class Publications(models.Model):
 
 
-    id = models.IntegerField(primary_key=True)
+    id = models.AutoField(primary_key=True,)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.TextField()
     content = models.TextField()

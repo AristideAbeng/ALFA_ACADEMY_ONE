@@ -10,5 +10,6 @@ class Publications(models.Model):
     title = models.TextField()
     content = models.TextField()
     image_url = models.TextField()
+    publication_type = models.CharField()
     date_published = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True)
